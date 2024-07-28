@@ -1,61 +1,145 @@
+`include "Opcodes.vh"
+
 module Processor (
     input clk,
     input rst
 );
-    localparam OPCODE_WIDTH = 15;
+    localparam ROM_FILE = "image.hex";
+    localparam OPCODE_WIDTH = 7;
     localparam OPCODE_DEPTH = 1023;
-    localparam OPCODE_DEPTH_LOG2 = $clog2(OPCODE_DEPTH);
+    localparam OPCODE_DEPTH_BITS = $clog2(OPCODE_DEPTH);
     localparam STACK_WIDTH = 255;
-    localparam STACK_DEPTH = 127;
-    localparam STACK_PREVIEW_DEPTH = 1;
+    localparam STACK_DEPTH = 31;
+    localparam STACK_DEPTH_BITS = $clog2(STACK_DEPTH);
 
-    // * Architecture
-    // Program Counter
-    wire pc_load_sig;
-    wire pc_inc_sig;
-    wire [OPCODE_DEPTH_LOG2:0] pc_load_val;
-    wire [OPCODE_DEPTH_LOG2:0] pc;
+    //* Memories
+    reg [STACK_WIDTH:0] stack[0:STACK_DEPTH];
+    reg [OPCODE_WIDTH:0] rom[0:OPCODE_DEPTH];
 
-    // ROM
-    wire [OPCODE_WIDTH:0] rom_data;  //? Data read from the ROM for the current pc
+    //* Internal Registers
+    reg [OPCODE_DEPTH_BITS:0] pc = 0;
+    reg [OPCODE_DEPTH_BITS:0] pc_next = 0;
+    reg [STACK_DEPTH_BITS:0] stack_ptr = 0;
+    reg [STACK_DEPTH_BITS:0] stack_ptr_next = 0;
+    wire [OPCODE_WIDTH:0] opcode;
 
-    // STACK
-    wire stack_push_sig;
-    wire [STACK_WIDTH:0] stack_push_data;
-    wire [2:0] stack_pop_sig;
-    wire [0:STACK_WIDTH] stack_preview[STACK_PREVIEW_DEPTH:0];
+    // frequently used inputs
+    wire [STACK_WIDTH:0] stack0;
+    wire [STACK_WIDTH:0] stack1;
 
-    //* Modules
-    ProgramCounter #(
-        .WIDTH(OPCODE_DEPTH_LOG2)
-    ) progCtr (
-        .clk(clk),
-        .rst(rst),
-        .load_pc(pc_load_sig),
-        .inc_pc(pc_inc_sig),
-        .pc_val(pc_load_val),
-        .pc(pc)
-    );
+    assign stack0 = (stack_ptr > 0) ? stack[stack_ptr-1] : 0;
+    assign stack1 = (stack_ptr > 1) ? stack[stack_ptr-2] : 0;
+    assign opcode = rom[pc];
 
-    ROM #(
-        .WIDTH(OPCODE_WIDTH),
-        .DEPTH(OPCODE_DEPTH)
-    ) rom (
-        .clk (clk),
-        .addr(pc),
-        .data(rom_data)
-    );
+    // load ROM
+    initial $readmemh("image.hex", rom);
 
-    STACK #(
-        .WIDTH(STACK_WIDTH),
-        .DEPTH(STACK_DEPTH),
-        .PREVIEW_DEPTH(STACK_PREVIEW_DEPTH)
-    ) stack (
-        .clk(clk),
-        .push(stack_push_sig),
-        .push_data(stack_push_data),
-        .pop(stack_pop_sig),
-        .preview(stack_preview)
-    );
+    //* Tracing
+    task undefined;
+        begin
+            $display("undefined ");
+            $display("HALTED");
+            $finish;
+        end
+    endtask
 
+    task stop;
+        begin
+            $display("STOP");
+            $finish;
+        end
+    endtask
+
+    task trace;
+        begin
+            $write("pc( %h ): ", pc);
+            $write("sp( %h ): ", stack_ptr);
+            case (opcode)
+                `STOP: $display("STOP ");
+                `ADD: $display("ADD ");
+                `MUL: $display("MUL ");
+                `LT: $display("LT ");
+                `EQ: $display("EQ ",);
+                `ISZERO: $display("ISZERO ");
+                `POP: $display("POP ");
+                `JUMPI: $display("JUMPI ");
+                `PUSH0: $display("PUSH0 ");
+                `PUSH1: $display("PUSH1 ");
+                `DUP1: $display("DUP1 ");
+                default: undefined;
+            endcase
+        end
+    endtask
+
+    //* Instruction decoding - Stack
+    // TODO: Add underflow checks
+    always @(pc) begin
+        case (opcode)
+            `STOP: stop;
+            `ADD: begin
+                stack[stack_ptr-2] <= stack0 + stack1;
+                stack_ptr_next <= stack_ptr - 1;
+                $display("ADD: %h + %h = %h", stack0, stack1, stack0 + stack1);
+            end
+            `MUL: begin
+                stack[stack_ptr-2] <= stack0 * stack1;
+                stack_ptr_next <= stack_ptr - 1;
+                $display("MUL: %h * %h = %h", stack0, stack1, stack0 * stack1);
+            end
+            `LT: begin
+                stack[stack_ptr-2] <= stack0 < stack1;
+                stack_ptr_next <= stack_ptr - 1;
+                $display("LT: %h < %h = %h", stack0, stack1, stack0 < stack1);
+            end
+            `EQ: begin
+                stack[stack_ptr-2] <= stack0 == stack1;
+                stack_ptr_next <= stack_ptr - 1;
+                $display("EQ: %h == %h = %h", stack0, stack1, stack0 == stack1);
+            end
+            `ISZERO: begin
+                stack[stack_ptr-1] <= stack0 == 0;
+                $display("ISZERO: %h == 0 = %h", stack0, stack0 == 0);
+            end
+            `POP: begin
+                stack_ptr_next <= stack_ptr - 1;
+                $display("POP: %h", stack0);
+            end
+            `JUMPI: begin
+                stack_ptr_next <= stack_ptr - 2;
+                $display("JUMPI: %h if %h", stack0, stack1);
+            end
+            `PUSH0: begin
+                stack[stack_ptr] <= 0;
+                stack_ptr_next   <= stack_ptr + 1;
+                $display("PUSH0: 0");
+            end
+            `PUSH1: begin
+                stack[stack_ptr] <= rom[pc+1];
+                stack_ptr_next   <= stack_ptr + 1;
+                $display("PUSH1: %h", rom[pc+1]);
+            end
+            `DUP1: begin
+                stack[stack_ptr] <= stack0;
+                stack_ptr_next   <= stack_ptr + 1;
+                $display("DUP1: %h", stack0);
+            end
+        endcase
+
+        case (opcode)
+            `JUMPI:  pc_next <= (stack1) ? stack0 : pc + 1;
+            `PUSH1:  pc_next <= pc + 2;
+            default: pc_next <= pc + 1;
+        endcase
+    end
+
+    //* Clock
+    always @(posedge clk) begin
+        if (rst) begin
+            stack_ptr = 0;
+            pc = 0;
+        end else begin
+            stack_ptr = stack_ptr_next;
+            pc = pc_next;
+        end
+    end
 endmodule

@@ -1,0 +1,11 @@
+`define STOP 'h00
+`define ADD 'h01
+`define MUL 'h02
+`define LT 'h10
+`define EQ 'h14
+`define ISZERO 'h15
+`define POP 'h50
+`define JUMPI 'h57
+`define PUSH0 'h5F
+`define PUSH1 'h60
+`define DUP1 'h80

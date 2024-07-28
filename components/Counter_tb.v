@@ -1,7 +1,7 @@
 `timescale 1 ns / 10 ps
-`define DUMPSTR(x) `"ProgramCounter_tb.vcd`"
+`define DUMPSTR(x) `"Counter_tb.vcd`"
 
-module ProgramCounter_tb ();
+module Counter_tb ();
 
     localparam WIDTH = 11;
 
@@ -22,7 +22,7 @@ module ProgramCounter_tb ();
     // run simulation
     initial begin
         $dumpfile(`DUMPSTR(`VCD_OUTPUT));
-        $dumpvars(0, ProgramCounter_tb);
+        $dumpvars(0, Counter_tb);
 
         rst <= 1;
         #(CLK_FREQUENCY) rst <= 0;
@@ -55,15 +55,15 @@ module ProgramCounter_tb ();
         $finish;
     end
 
-    ProgramCounter #(
+    Counter #(
         .WIDTH(WIDTH)
     ) programCounter (
         .clk(clk),
         .rst(rst),
-        .load_pc(load_pc),
-        .inc_pc(inc_pc),
-        .pc_val(pc_val),
-        .pc(pc)
+        .load_sig(load_pc),
+        .inc_sig(inc_pc),
+        .load_val(pc_val),
+        .ctr(pc)
     );
 
 endmodule
