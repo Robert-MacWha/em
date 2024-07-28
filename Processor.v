@@ -4,11 +4,11 @@ module Processor (
     input clk,
     input rst
 );
-    localparam ROM_FILE = "image.hex";
+    localparam ROM_FILE = "test.hex";
     localparam OPCODE_WIDTH = 7;
     localparam OPCODE_DEPTH = 1023;
     localparam OPCODE_DEPTH_BITS = $clog2(OPCODE_DEPTH);
-    localparam STACK_WIDTH = 255;
+    localparam STACK_WIDTH = 16;
     localparam STACK_DEPTH = 31;
     localparam STACK_DEPTH_BITS = $clog2(STACK_DEPTH);
 
@@ -32,7 +32,7 @@ module Processor (
     assign opcode = rom[pc];
 
     // load ROM
-    initial $readmemh("image.hex", rom);
+    initial $readmemh(ROM_FILE, rom);
 
     //* Tracing
     task undefined;
