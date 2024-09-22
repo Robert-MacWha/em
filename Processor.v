@@ -50,32 +50,11 @@ module Processor (
         end
     endtask
 
-    task trace;
-        begin
-            $write("pc( %h ): ", pc);
-            $write("sp( %h ): ", stack_ptr);
-            case (opcode)
-                `STOP: $display("STOP ");
-                `ADD: $display("ADD ");
-                `MUL: $display("MUL ");
-                `LT: $display("LT ");
-                `EQ: $display("EQ ",);
-                `ISZERO: $display("ISZERO ");
-                `POP: $display("POP ");
-                `JUMPI: $display("JUMPI ");
-                `PUSH0: $display("PUSH0 ");
-                `PUSH1: $display("PUSH1 ");
-                `DUP1: $display("DUP1 ");
-                default: undefined;
-            endcase
-        end
-    endtask
-
     //* Instruction decoding - Stack
     // TODO: Add underflow checks
     always @(pc) begin
         case (opcode)
-            `STOP: stop;
+            `STOP:   stop;
             `ADD: begin
                 stack[stack_ptr-2] <= stack0 + stack1;
                 stack_ptr_next <= stack_ptr - 1;
@@ -123,6 +102,7 @@ module Processor (
                 stack_ptr_next   <= stack_ptr + 1;
                 $display("DUP1: %h", stack0);
             end
+            default: undefined;
         endcase
 
         case (opcode)
