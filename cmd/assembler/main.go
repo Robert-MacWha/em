@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"strings"
@@ -9,13 +10,17 @@ import (
 )
 
 func main() {
-	argLength := len(os.Args[1:])
-	if argLength != 1 {
-		fmt.Println("Usage: assembler <asm file>")
+	detailed := flag.Bool("d", false, "Generate a details file")
+	flag.Parse()
+
+	args := flag.Args()
+
+	if len(args) != 1 {
+		fmt.Println("Usage: assembler [-d] <asm file>")
 		os.Exit(1)
 	}
 
-	asmFile := os.Args[1]
+	asmFile := args[0]
 	hexFile := strings.Split(asmFile, ".")[0] + ".hex"
 	detailsFile := strings.Split(asmFile, ".")[0] + "_details.txt"
 
@@ -29,9 +34,11 @@ func main() {
 		panic(err)
 	}
 
-	err = writeDetails(detailsFile, instructions)
-	if err != nil {
-		panic(err)
+	if *detailed {
+		err = writeDetails(detailsFile, instructions)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 

@@ -1,6 +1,9 @@
 # E~~V~~M
 
-## Architecture
+## Assembler
+`/cmd/assembler/main.go` is a basic opcode assembler to convert from annotated evm opcodes to a rom file for the EM.  It ignores comments (deliniated by `//`) and generates a seperate `*_details.txt` file as a debug measure with the debug flag (`-d`).
+
+## FPGA Architecture
 1. Program Counter
 2. Opcode Decoder
 3. Stack
